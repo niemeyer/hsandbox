@@ -1,0 +1,269 @@
+#!/usr/bin/python
+import subprocess
+import tempfile
+import signal
+import shutil
+import sys
+import os
+
+import pyinotify
+
+
+# TODO: -v for splitting
+# TODO: Environment variables for C/CPP libraries and include paths.
+# TODO: 
+
+
+SCREENRC = """
+sessionname hsandbox
+screen -t Sandbox %(hsandbox)s --editor
+split
+focus
+screen -t Output %(hsandbox)s --monitor
+focus
+"""
+
+VIM_ARGS = "+'normal '$HSANDBOX_LINE'gg$'"
+
+EDITOR_ARGS = {
+    "vi": VIM_ARGS,
+    "vim": VIM_ARGS,
+    "gvim": VIM_ARGS,
+    }
+
+
+class Error(Exception):
+    """Any local error."""
+
+
+class Hacking(object):
+
+    filename = "sandbox.txt"
+    template = "<cursor>"
+
+    def __init__(self):
+        self.sandbox_content, self.cursor_line = parse_cursor(self.template)
+
+    def write_template(self):
+        with open(self.filename, "w") as file:
+            file.write(self.sandbox_content)
+
+
+class GoHacking(Hacking):
+
+    filename = "sandbox.go"
+
+    template = ("package main\n\n"
+                "import (\n)\n\n"
+                "func main() {\n<cursor>\n}\n")
+
+    @property
+    def command(self):
+        return ("6g -o sandbox.l sandbox.go && "
+                "6l -o sandbox sandbox.l && "
+                "./sandbox")
+
+
+class ErlangHacking(Hacking):
+
+    filename = "sandbox.erl"
+
+    template = ("-module(sandbox).\n"
+                "-export([start/0]).\n\n"
+                "start() ->\n"
+                "<cursor>\n")
+
+    command = ("erlc sandbox.erl && "
+               "erl -noshell -s sandbox start -s init stop")
+
+
+class CHacking(Hacking):
+
+    filename = "sandbox.c"
+
+    template = ("#include <stdlib.h>\n"
+                "#include <stdio.h>\n\n"
+                "int main(int argc, char *argv[])\n{\n"
+                "<cursor>\n"
+                "\treturn 0;\n"
+                "}\n")
+
+    command = "gcc sandbox.c -o sandbox && ./sandbox"
+
+
+class CCHacking(Hacking):
+
+    filename = "sandbox.cc"
+
+    template = ("#include <iostream>\n\n"
+                "using namespace std;\n\n"
+                "int main(int argc, char *argv[])\n{\n"
+                "<cursor>\n"
+                "\treturn 0;\n"
+                "}\n")
+
+    command = "g++ sandbox.cc -o sandbox && ./sandbox"
+
+
+class JavaHacking(Hacking):
+
+    filename = "Sandbox.java"
+
+    template = ("\npublic class Sandbox {\n\n"
+                "\tpublic static void main(String[] args) {\n"
+                "\t\t<cursor>\n"
+                "\t}\n\n"
+                "}\n")
+
+    command = "javac Sandbox.java && java Sandbox"
+
+
+class HaskellHacking(Hacking):
+    filename = "sandbox.hs"
+    template = "\nmain =\n\t<cursor>\n"
+    command = "runhaskelljavac Sandbox.java && java Sandbox"
+
+
+class PythonHacking(Hacking):
+    filename = "sandbox.py"
+    command = "python sandbox.py"
+
+
+class NodeHacking(Hacking):
+    filename = "sandbox.js"
+    command = "node sandbox.js"
+
+
+class RubyHacking(Hacking):
+    filename = "sandbox.rb"
+    command = "ruby sandbox.rb"
+
+
+
+LANGUAGES = {
+    "c": CHacking,
+    "cc": CCHacking,
+    "cpp": CCHacking,
+    "go": GoHacking,
+    "py": PythonHacking,
+    "js": NodeHacking,
+    "rb": RubyHacking,
+    "erl": ErlangHacking,
+    "hs": HaskellHacking,
+    "java": JavaHacking,
+    }
+
+
+def parse_cursor(template):
+    before, after = template.split("<cursor>")
+    line = before.count("\n") + 1
+    content = before + after
+    return content, line
+
+
+class EventHandler(pyinotify.ProcessEvent):
+
+    def __init__(self, hacking):
+        self.hacking = hacking
+        self.process = None
+
+    def process_IN_MODIFY(self, event):
+        if event.pathname == os.path.join(os.getcwd(), self.hacking.filename):
+            if self.process:
+                os.killpg(self.process.pid, signal.SIGKILL)
+            def preexec_fn():
+                os.setpgid(0, 0)
+            os.system("clear")
+            self.process = subprocess.Popen(self.hacking.command, shell=True,
+                                            preexec_fn=preexec_fn)
+
+    def process_IN_DELETE(self, event):
+        if event.pathname == os.path.join(os.getcwd(), ".editor-running"):
+            sys.exit(0)
+
+
+def editor(hacking):
+    open(".editor-running", "w").close()
+    os.environ["HSANDBOX_LINE"] = str(hacking.cursor_line)
+    cmd = os.environ.get("HSANDBOX_EDITOR")
+    if not cmd:
+        cmd = os.environ.get("EDITOR")
+        if not cmd:
+            cmd = "vi"
+        cmd_args = EDITOR_ARGS.get(cmd.split()[0])
+        if cmd_args:
+            cmd += " " + cmd_args
+    os.system("%s %s" % (cmd, hacking.filename))
+    shutil.copy(hacking.filename, os.path.expanduser("~/." + hacking.filename))
+    os.unlink(".editor-running")
+
+
+def monitor(hacking):
+    mask = pyinotify.IN_MODIFY | pyinotify.IN_DELETE
+    wm = pyinotify.WatchManager()
+    handler = EventHandler(hacking)
+    notifier = pyinotify.Notifier(wm, handler)
+    wm.add_watch(".", mask)
+    notifier.loop()
+
+
+USAGE = """\
+Usage: hsandbox <lang>
+
+Available languages:
+
+  c
+  cc, cpp
+  hs, ghc, haskell
+  py, python
+  rb, ruby
+
+
+
+"""
+
+
+def main(argv):
+    if len(argv) > 1:
+        language = argv[1]
+        if language not in LANGUAGES:
+            raise Error("Language %r not known" % language)
+        hacking = LANGUAGES[language]()
+
+    if len(argv) > 2:
+        option = argv[2]
+        if option == "--editor":
+            return editor(hacking)
+        elif option == "--monitor":
+            return monitor(hacking)
+
+    if len(argv) != 2:
+        raise Error("Usage: %s %s" % (os.path.basename(argv[0]),
+                                      "|".join(LANGUAGES)))
+
+    workdir = tempfile.mkdtemp(prefix="hsandbox-")
+    try:
+        os.chdir(workdir)
+        screenrc = os.path.join(workdir, ".screenrc")
+        with open(screenrc, "w") as file:
+            file.write(SCREENRC % {"hsandbox": " ".join(argv[:2])})
+        hacking.write_template()
+        subprocess.call(["screen", "-c", screenrc])
+    finally:
+        shutil.rmtree(workdir)
+
+    print ("Thanks for using hsandbox. "
+           "Your last sandbox is copied to ~/.sandbox.go.")
+    # Great stuff you did. Saved it in ~/.hsandbox.%s for you.
+    # What a bunch of hacks! Saved it in ~/.hsandbox.%s either way.
+    # I'd even show that to my mom, if I had one. Saved on ~/.hsandbox.%s.
+    # Saved that crap to ~/.hsandbox.%s, if you dare to use it.
+
+
+if __name__ == "__main__":
+    try:
+        main(sys.argv)
+    except KeyboardInterrupt:
+        sys.exit("Interrupted")
+    except Error, e:
+        sys.exit("error: %s" % e)
