@@ -5,6 +5,7 @@ import signal
 import shutil
 import sys
 import os
+import re
 
 import pyinotify
 
@@ -19,7 +20,7 @@ sessionname hsandbox
 screen -t Sandbox %(hsandbox)s --editor
 split
 focus
-screen -t Output %(hsandbox)s --monitor
+screen -t Output %(hsandbox)s --runner
 focus
 """
 
@@ -121,35 +122,35 @@ class JavaHacking(Hacking):
 class HaskellHacking(Hacking):
     filename = "sandbox.hs"
     template = "\nmain =\n\t<cursor>\n"
-    command = "runhaskelljavac Sandbox.java && java Sandbox"
+    command = "runhaskell sandbox.hs"
 
 
 class PythonHacking(Hacking):
     filename = "sandbox.py"
-    command = "python sandbox.py"
+    command = "python<version> sandbox.py"
 
 
 class NodeHacking(Hacking):
     filename = "sandbox.js"
-    command = "node sandbox.js"
+    command = "node<version> sandbox.js"
 
 
 class RubyHacking(Hacking):
     filename = "sandbox.rb"
-    command = "ruby sandbox.rb"
+    command = "ruby<version> sandbox.rb"
 
 
 
 LANGUAGES = {
     "c": CHacking,
-    "cc": CCHacking,
-    "cpp": CCHacking,
+    "cc": CCHacking, "cpp": CCHacking,
     "go": GoHacking,
-    "py": PythonHacking,
-    "js": NodeHacking,
-    "rb": RubyHacking,
-    "erl": ErlangHacking,
-    "hs": HaskellHacking,
+    "py": PythonHacking, "python": PythonHacking,
+    "js": NodeHacking, "javascript": NodeHacking,
+    "node": NodeHacking, "nodejs": NodeHacking,
+    "rb": RubyHacking, "ruby": RubyHacking,
+    "erl": ErlangHacking, "erlang": ErlangHacking,
+    "hs": HaskellHacking, "haskell": HaskellHacking, "ghc": HaskellHacking,
     "java": JavaHacking,
     }
 
@@ -163,8 +164,9 @@ def parse_cursor(template):
 
 class EventHandler(pyinotify.ProcessEvent):
 
-    def __init__(self, hacking):
+    def __init__(self, hacking, version):
         self.hacking = hacking
+        self.version = version
         self.process = None
 
     def process_IN_MODIFY(self, event):
@@ -174,7 +176,8 @@ class EventHandler(pyinotify.ProcessEvent):
             def preexec_fn():
                 os.setpgid(0, 0)
             os.system("clear")
-            self.process = subprocess.Popen(self.hacking.command, shell=True,
+            command = self.hacking.command.replace("<version>", self.version)
+            self.process = subprocess.Popen(command, shell=True,
                                             preexec_fn=preexec_fn)
 
     def process_IN_DELETE(self, event):
@@ -198,48 +201,60 @@ def editor(hacking):
     os.unlink(".editor-running")
 
 
-def monitor(hacking):
+def runner(hacking, version):
     mask = pyinotify.IN_MODIFY | pyinotify.IN_DELETE
     wm = pyinotify.WatchManager()
-    handler = EventHandler(hacking)
+    handler = EventHandler(hacking, version)
     notifier = pyinotify.Notifier(wm, handler)
     wm.add_watch(".", mask)
     notifier.loop()
 
 
 USAGE = """\
-Usage: hsandbox <lang>
+Usage: hsandbox <lang>[<version>]
 
 Available languages:
 
   c
   cc, cpp
+  erl, erlang
+  go
   hs, ghc, haskell
+  java
+  js, javascript, node, nodejs
   py, python
   rb, ruby
 
+Versioning examples:
 
+  hsandbox py3.1
+  hsandbox rb1.8
 
 """
 
 
 def main(argv):
     if len(argv) > 1:
-        language = argv[1]
-        if language not in LANGUAGES:
-            raise Error("Language %r not known" % language)
+        m = re.match("([a-z]+)(.*)", argv[1])
+        if not m or m.group(1) not in LANGUAGES:
+            raise Error("Language %r not known" % argv[1])
+        language, version = m.groups()
         hacking = LANGUAGES[language]()
+        if version and hacking.command.find("<version>") == -1:
+            raise Error("Language %s doesn't support versioning")
 
     if len(argv) > 2:
         option = argv[2]
         if option == "--editor":
             return editor(hacking)
-        elif option == "--monitor":
-            return monitor(hacking)
+        elif option == "--runner":
+            return runner(hacking, version)
 
     if len(argv) != 2:
         raise Error("Usage: %s %s" % (os.path.basename(argv[0]),
                                       "|".join(LANGUAGES)))
+
+    argv[0] = os.path.abspath(argv[0])
 
     workdir = tempfile.mkdtemp(prefix="hsandbox-")
     try:
