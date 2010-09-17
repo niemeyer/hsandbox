@@ -42,12 +42,17 @@ class Hacking(object):
     filename = "sandbox.txt"
     template = "<cursor>"
 
-    def __init__(self):
-        self.sandbox_content, self.cursor_line = parse_cursor(self.template)
-
-    def write_template(self):
+    def write_sandbox(self):
+        template_path = os.path.expanduser("~/." + self.filename + ".template")
+        if os.path.isfile(template_path):
+            with open(template_path) as file:
+                template = file.read()
+        else:
+            template = self.template
+        sandbox_content, cursor_line = parse_cursor(template)
         with open(self.filename, "w") as file:
-            file.write(self.sandbox_content)
+            file.write(sandbox_content)
+        return cursor_line
 
 
 class GoHacking(Hacking):
@@ -143,20 +148,22 @@ class RubyHacking(Hacking):
 
 LANGUAGES = {
     "c": CHacking,
-    "cc": CCHacking, "cpp": CCHacking,
+    "cc": CCHacking,
     "go": GoHacking,
-    "py": PythonHacking, "python": PythonHacking,
-    "js": NodeHacking, "javascript": NodeHacking,
-    "node": NodeHacking, "nodejs": NodeHacking,
-    "rb": RubyHacking, "ruby": RubyHacking,
-    "erl": ErlangHacking, "erlang": ErlangHacking,
-    "hs": HaskellHacking, "haskell": HaskellHacking, "ghc": HaskellHacking,
+    "py": PythonHacking,
+    "js": NodeHacking,
+    "rb": RubyHacking,
+    "erl": ErlangHacking,
+    "hs": HaskellHacking,
     "java": JavaHacking,
     }
 
 
 def parse_cursor(template):
-    before, after = template.split("<cursor>")
+    if "<cursor>" in template:
+        before, after = template.split("<cursor>")
+    else:
+        before, after = "", template
     line = before.count("\n") + 1
     content = before + after
     return content, line
@@ -187,7 +194,8 @@ class EventHandler(pyinotify.ProcessEvent):
 
 def editor(hacking):
     open(".editor-running", "w").close()
-    os.environ["HSANDBOX_LINE"] = str(hacking.cursor_line)
+    cursor_line = hacking.write_sandbox()
+    os.environ["HSANDBOX_LINE"] = str(cursor_line)
     cmd = os.environ.get("HSANDBOX_EDITOR")
     if not cmd:
         cmd = os.environ.get("EDITOR")
@@ -215,15 +223,15 @@ Usage: hsandbox <lang>[<version>]
 
 Available languages:
 
-  c
-  cc, cpp
-  erl, erlang
-  go
-  hs, ghc, haskell
-  java
-  js, javascript, node, nodejs
-  py, python
-  rb, ruby
+  c    - C
+  cc   - C++
+  erl  - Erlang
+  go   - Go
+  hs   - Haskell (ghc)
+  java - Java
+  js   - Javascript (Node)
+  py   - Python
+  rb   - Ruby
 
 Versioning examples:
 
@@ -262,7 +270,6 @@ def main(argv):
         screenrc = os.path.join(workdir, ".screenrc")
         with open(screenrc, "w") as file:
             file.write(SCREENRC % {"hsandbox": " ".join(argv[:2])})
-        hacking.write_template()
         subprocess.call(["screen", "-c", screenrc])
     finally:
         shutil.rmtree(workdir)
