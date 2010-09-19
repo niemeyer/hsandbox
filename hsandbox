@@ -38,12 +38,18 @@ class Hacking(object):
     filename = "sandbox.txt"
     template = "<cursor>"
     command = ""
+    use_old_sandbox = False
 
     def write_sandbox(self):
-        template_path = os.path.expanduser("~/." + self.filename + ".template")
-        if os.path.isfile(template_path):
-            with open(template_path) as file:
-                template = file.read()
+        template_paths = ["~/." + self.filename + ".template"]
+        if self.use_old_sandbox:
+            template_paths.insert(0, "~/." + self.filename)
+        for template_path in template_paths:
+            template_path = os.path.expanduser(template_path)
+            if os.path.isfile(template_path):
+                with open(template_path) as file:
+                    template = file.read()
+                break
         else:
             template = self.template
         sandbox_content, cursor_line = parse_cursor(template)
@@ -209,6 +215,28 @@ class EventHandler(pyinotify.ProcessEvent):
             sys.exit(0)
 
 
+def screen(hacking, argv):
+    argv[0] = os.path.abspath(argv[0])
+    workdir = tempfile.mkdtemp(prefix="hsandbox-")
+    try:
+        os.chdir(workdir)
+        screenrc = os.path.join(workdir, ".hsandbox-screenrc")
+        with open(screenrc, "w") as file:
+            file.write(SCREENRC % {"hsandbox": " ".join(argv)})
+        subprocess.call(["screen", "-c", screenrc])
+    finally:
+        shutil.rmtree(workdir)
+
+    message = random.choice([
+        "Great stuff you did. Saved it in ~/.%s for you.",
+        "What a bunch of hacks! Saved it in ~/.hsandbox.%s either way.",
+        "I'd even show that to my mom, if I had one. Saved on ~/.%s.",
+        "Saved that crap to ~/.%s, if you dare to use it.",
+        ])
+
+    print message % hacking.filename
+
+
 def editor(hacking):
     open(".hsandbox-editor-running", "w").close()
     cursor_line = hacking.write_sandbox()
@@ -233,7 +261,7 @@ def runner(hacking, version):
     notifier = pyinotify.Notifier(wm, handler)
     wm.add_watch(".", mask)
     notifier.loop()
-
+ 
 
 USAGE = """\
 Usage: hsandbox <lang>[<version>] [options]
@@ -258,58 +286,51 @@ Versioning examples:
 
 Options:
 
-  (none for now)
+  -c  - Continue editing the last sandbox for the given language.
 
 """
 
 
+def split_version(argument):
+    m = re.match("([a-z]+)(.*)", argument)
+    if not m or m.group(1) not in LANGUAGES:
+        if argument.startswith("-"):
+            sys.exit(USAGE)
+        raise Error("Language %r not known" % argument)
+    return m.groups()
+
+
 def main(argv):
     if len(argv) > 1:
-        m = re.match("([a-z]+)(.*)", argv[1])
-        if not m or m.group(1) not in LANGUAGES:
-            if argv[1].startswith("-"):
-                sys.exit(USAGE)
-            raise Error("Language %r not known" % argv[1])
-        language, version = m.groups()
+        language, version = split_version(argv[1])
         hacking = LANGUAGES[language]()
         if version and not hacking.support_version():
             raise Error("Language %s doesn't support versioning" % language)
-
-    if len(argv) > 2:
-        option = argv[2]
-        if option == "--editor":
-            return editor(hacking)
-        elif option == "--runner":
-            return runner(hacking, version)
-
-    if len(argv) != 2:
+    else:
         sys.exit(USAGE)
 
+    mode = "screen"
 
-    argv[0] = os.path.abspath(argv[0])
+    if len(argv) > 2:
+        for option in argv[2:]:
+            if option == "--editor":
+                mode = "editor"
+            elif option == "--runner":
+                mode = "runner"
+            elif option == "-c":
+                hacking.use_old_sandbox = True
+            else:
+                sys.exit(USAGE)
 
-    workdir = tempfile.mkdtemp(prefix="hsandbox-")
-    try:
-        os.chdir(workdir)
-        screenrc = os.path.join(workdir, ".hsandbox-screenrc")
-        with open(screenrc, "w") as file:
-            file.write(SCREENRC % {"hsandbox": " ".join(argv[:2])})
-        subprocess.call(["screen", "-c", screenrc])
-    finally:
-        shutil.rmtree(workdir)
+    if mode == "screen":
+        screen(hacking, argv)
+    elif mode == "editor":
+        editor(hacking)
+    elif mode == "runner":
+        runner(hacking, version)
+    else:
+        raise RuntimeError("WTF? (%s)" % mode)
 
-    goodbye(hacking)
-
-
-def goodbye(hacking):
-    message = random.choice([
-        "Great stuff you did. Saved it in ~/.%s for you.",
-        "What a bunch of hacks! Saved it in ~/.hsandbox.%s either way.",
-        "I'd even show that to my mom, if I had one. Saved on ~/.%s.",
-        "Saved that crap to ~/.%s, if you dare to use it.",
-        ])
-    print message % hacking.filename
-    
 
 if __name__ == "__main__":
     try:
