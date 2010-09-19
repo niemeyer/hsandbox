@@ -101,14 +101,17 @@ class CHacking(Hacking):
                 "int main(int argc, char *argv[])\n{\n"
                 "<cursor>\n"
                 "\treturn 0;\n"
-                "}\n")
+                "}\n\n"
+                "/* Environment variables HSANDBOX_{CFLAGS,LDFLAGS} "
+                "may be useful. */\n")
 
     def get_command(self, version):
         if version:
             standard = "-std=c" + version
         else:
             standard = "-ansi"
-        return ("gcc %s -Wall -pedantic sandbox.c -o sandbox && "
+        return ("gcc %s -Wall -pedantic sandbox.c -o sandbox"
+                " $HSANDBOX_CFLAGS $HSANDBOX_LDFLAGS && "
                 "./sandbox") % standard
 
 
@@ -121,14 +124,17 @@ class CCHacking(Hacking):
                 "int main(int argc, char *argv[])\n{\n"
                 "<cursor>\n"
                 "\treturn 0;\n"
-                "}\n")
+                "}\n\n"
+                "// Environment variables HSANDBOX_{CXXFLAGS,LDFLAGS} "
+                "may be useful.\n")
 
     def get_command(self, version):
         if version:
             standard = "-std=c++" + version
         else:
             standard = "-ansi"
-        return ("g++ %s -Wall -pedantic sandbox.cc -o sandbox && "
+        return ("g++ %s -Wall -pedantic sandbox.cc -o sandbox"
+                " $HSANDBOX_CXXFLAGS $HSANDBOX_LDFLAGS && "
                 "./sandbox") % standard
 
 
