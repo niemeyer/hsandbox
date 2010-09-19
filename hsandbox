@@ -79,9 +79,18 @@ class GoHacking(Hacking):
                 "func main() {\n<cursor>\n}\n")
 
     def get_command(self, version):
-        return ("6g -o sandbox.l sandbox.go && "
-                "6l -o sandbox sandbox.l && "
-                "./sandbox")
+        arch = os.uname()[-1]
+        if arch == "x86_64":
+            number = 6
+        elif arch.endswith("86"):
+            number = 8
+        elif arch.startswith("arm"):
+            number = 5
+        else:
+            return 'echo "Error: hsandbox can\'t Go on architecture %s"' % arch
+        return ("%dg -o sandbox.l sandbox.go && "
+                "%dl -o sandbox sandbox.l && "
+                "./sandbox") % (number, number)
 
 
 class ErlangHacking(Hacking):
