@@ -3,16 +3,12 @@ import subprocess
 import tempfile
 import signal
 import shutil
+import random
 import sys
 import os
 import re
 
 import pyinotify
-
-
-# TODO: -v for splitting
-# TODO: Environment variables for C/CPP libraries and include paths.
-# TODO: 
 
 
 SCREENRC = """
@@ -41,6 +37,7 @@ class Hacking(object):
 
     filename = "sandbox.txt"
     template = "<cursor>"
+    command = ""
 
     def write_sandbox(self):
         template_path = os.path.expanduser("~/." + self.filename + ".template")
@@ -54,6 +51,12 @@ class Hacking(object):
             file.write(sandbox_content)
         return cursor_line
 
+    def get_command(self, version):
+        return self.command.replace("<version>", version)
+
+    def support_version(self):
+        return self.get_command("V") != self.get_command("")
+
 
 class GoHacking(Hacking):
 
@@ -63,8 +66,7 @@ class GoHacking(Hacking):
                 "import (\n)\n\n"
                 "func main() {\n<cursor>\n}\n")
 
-    @property
-    def command(self):
+    def get_command(self, version):
         return ("6g -o sandbox.l sandbox.go && "
                 "6l -o sandbox sandbox.l && "
                 "./sandbox")
@@ -79,8 +81,9 @@ class ErlangHacking(Hacking):
                 "start() ->\n"
                 "<cursor>\n")
 
-    command = ("erlc sandbox.erl && "
-               "erl -noshell -s sandbox start -s init stop")
+    def get_command(self, version):
+        return ("erlc sandbox.erl && "
+                "erl -noshell -s sandbox start -s init stop")
 
 
 class CHacking(Hacking):
@@ -94,7 +97,13 @@ class CHacking(Hacking):
                 "\treturn 0;\n"
                 "}\n")
 
-    command = "gcc sandbox.c -o sandbox && ./sandbox"
+    def get_command(self, version):
+        if version:
+            standard = "-std=c" + version
+        else:
+            standard = "-ansi"
+        return ("gcc %s -Wall -pedantic sandbox.c -o sandbox && "
+                "./sandbox") % standard
 
 
 class CCHacking(Hacking):
@@ -108,7 +117,13 @@ class CCHacking(Hacking):
                 "\treturn 0;\n"
                 "}\n")
 
-    command = "g++ sandbox.cc -o sandbox && ./sandbox"
+    def get_command(self, version):
+        if version:
+            standard = "-std=c++" + version
+        else:
+            standard = "-ansi"
+        return ("g++ %s -Wall -pedantic sandbox.cc -o sandbox && "
+                "./sandbox") % standard
 
 
 class JavaHacking(Hacking):
@@ -149,6 +164,7 @@ class RubyHacking(Hacking):
 LANGUAGES = {
     "c": CHacking,
     "cc": CCHacking,
+    "cpp": CCHacking,
     "go": GoHacking,
     "py": PythonHacking,
     "js": NodeHacking,
@@ -183,17 +199,18 @@ class EventHandler(pyinotify.ProcessEvent):
             def preexec_fn():
                 os.setpgid(0, 0)
             os.system("clear")
-            command = self.hacking.command.replace("<version>", self.version)
+            command = self.hacking.get_command(self.version)
             self.process = subprocess.Popen(command, shell=True,
                                             preexec_fn=preexec_fn)
 
     def process_IN_DELETE(self, event):
-        if event.pathname == os.path.join(os.getcwd(), ".editor-running"):
+        if event.pathname == os.path.join(os.getcwd(),
+                                          ".hsandbox-editor-running"):
             sys.exit(0)
 
 
 def editor(hacking):
-    open(".editor-running", "w").close()
+    open(".hsandbox-editor-running", "w").close()
     cursor_line = hacking.write_sandbox()
     os.environ["HSANDBOX_LINE"] = str(cursor_line)
     cmd = os.environ.get("HSANDBOX_EDITOR")
@@ -206,7 +223,7 @@ def editor(hacking):
             cmd += " " + cmd_args
     os.system("%s %s" % (cmd, hacking.filename))
     shutil.copy(hacking.filename, os.path.expanduser("~/." + hacking.filename))
-    os.unlink(".editor-running")
+    os.unlink(".hsandbox-editor-running")
 
 
 def runner(hacking, version):
@@ -219,24 +236,29 @@ def runner(hacking, version):
 
 
 USAGE = """\
-Usage: hsandbox <lang>[<version>]
+Usage: hsandbox <lang>[<version>] [options]
 
 Available languages:
 
-  c    - C
-  cc   - C++
-  erl  - Erlang
-  go   - Go
-  hs   - Haskell (ghc)
-  java - Java
-  js   - Javascript (Node)
-  py   - Python
-  rb   - Ruby
+  c      - C
+  cc/cpp - C++
+  erl    - Erlang
+  go     - Go
+  hs     - Haskell (ghc)
+  java   - Java
+  js     - Javascript (Node)
+  py     - Python
+  rb     - Ruby
 
 Versioning examples:
 
+  hsandbox c99
   hsandbox py3.1
   hsandbox rb1.8
+
+Options:
+
+  (none for now)
 
 """
 
@@ -245,11 +267,13 @@ def main(argv):
     if len(argv) > 1:
         m = re.match("([a-z]+)(.*)", argv[1])
         if not m or m.group(1) not in LANGUAGES:
+            if argv[1].startswith("-"):
+                sys.exit(USAGE)
             raise Error("Language %r not known" % argv[1])
         language, version = m.groups()
         hacking = LANGUAGES[language]()
-        if version and hacking.command.find("<version>") == -1:
-            raise Error("Language %s doesn't support versioning")
+        if version and not hacking.support_version():
+            raise Error("Language %s doesn't support versioning" % language)
 
     if len(argv) > 2:
         option = argv[2]
@@ -259,28 +283,33 @@ def main(argv):
             return runner(hacking, version)
 
     if len(argv) != 2:
-        raise Error("Usage: %s %s" % (os.path.basename(argv[0]),
-                                      "|".join(LANGUAGES)))
+        sys.exit(USAGE)
+
 
     argv[0] = os.path.abspath(argv[0])
 
     workdir = tempfile.mkdtemp(prefix="hsandbox-")
     try:
         os.chdir(workdir)
-        screenrc = os.path.join(workdir, ".screenrc")
+        screenrc = os.path.join(workdir, ".hsandbox-screenrc")
         with open(screenrc, "w") as file:
             file.write(SCREENRC % {"hsandbox": " ".join(argv[:2])})
         subprocess.call(["screen", "-c", screenrc])
     finally:
         shutil.rmtree(workdir)
 
-    print ("Thanks for using hsandbox. "
-           "Your last sandbox is copied to ~/.sandbox.go.")
-    # Great stuff you did. Saved it in ~/.hsandbox.%s for you.
-    # What a bunch of hacks! Saved it in ~/.hsandbox.%s either way.
-    # I'd even show that to my mom, if I had one. Saved on ~/.hsandbox.%s.
-    # Saved that crap to ~/.hsandbox.%s, if you dare to use it.
+    goodbye(hacking)
 
+
+def goodbye(hacking):
+    message = random.choice([
+        "Great stuff you did. Saved it in ~/.%s for you.",
+        "What a bunch of hacks! Saved it in ~/.hsandbox.%s either way.",
+        "I'd even show that to my mom, if I had one. Saved on ~/.%s.",
+        "Saved that crap to ~/.%s, if you dare to use it.",
+        ])
+    print message % hacking.filename
+    
 
 if __name__ == "__main__":
     try:
