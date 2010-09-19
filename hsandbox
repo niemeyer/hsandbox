@@ -11,6 +11,8 @@ import re
 import pyinotify
 
 
+HSANDBOX_DIR = os.path.expanduser("~/.hsandbox")
+
 SCREENRC = """
 sessionname hsandbox
 screen -t Sandbox %(hsandbox)s --editor
@@ -41,9 +43,10 @@ class Hacking(object):
     use_old_sandbox = False
 
     def write_sandbox(self):
-        template_paths = ["~/." + self.filename + ".template"]
+        template_paths = [os.path.join(HSANDBOX_DIR,
+                                       self.filename + ".template")]
         if self.use_old_sandbox:
-            template_paths.insert(0, "~/." + self.filename)
+            template_paths.insert(0, os.path.join(HSANDBOX_DIR, self.filename))
         for template_path in template_paths:
             template_path = os.path.expanduser(template_path)
             if os.path.isfile(template_path):
@@ -53,8 +56,11 @@ class Hacking(object):
         else:
             template = self.template
         sandbox_content, cursor_line = parse_cursor(template)
-        with open(self.filename, "w") as file:
+        # Write to a temporary file and then rename, to prevent
+        # generating a MODIFY event and attempting to run it.
+        with open(self.filename + ".tmp", "w") as file:
             file.write(sandbox_content)
+        os.rename(self.filename + ".tmp", self.filename)
         return cursor_line
 
     def get_command(self, version):
@@ -246,7 +252,6 @@ def screen(hacking, argv):
 
 
 def editor(hacking):
-    open(".hsandbox-editor-running", "w").close()
     cursor_line = hacking.write_sandbox()
     os.environ["HSANDBOX_LINE"] = str(cursor_line)
     cmd = os.environ.get("HSANDBOX_EDITOR")
@@ -257,8 +262,9 @@ def editor(hacking):
         cmd_args = EDITOR_ARGS.get(cmd.split()[0])
         if cmd_args:
             cmd += " " + cmd_args
+    open(".hsandbox-editor-running", "w").close()
     os.system("%s %s" % (cmd, hacking.filename))
-    shutil.copy(hacking.filename, os.path.expanduser("~/." + hacking.filename))
+    shutil.copy(hacking.filename, os.path.join(HSANDBOX_DIR, hacking.filename))
     os.unlink(".hsandbox-editor-running")
 
 
@@ -309,6 +315,11 @@ def split_version(argument):
 
 
 def main(argv):
+    try:
+        os.mkdir(HSANDBOX_DIR)
+    except OSError:
+        pass
+
     if len(argv) > 1:
         language, version = split_version(argv[1])
         hacking = LANGUAGES[language]()
