@@ -20,7 +20,7 @@ screen -t Output %(hsandbox)s --runner
 focus
 """
 
-VIM_ARGS = "+'normal '$HSANDBOX_LINE'gg$'"
+VIM_ARGS = "+$HSANDBOX_LINE +'normal $'"
 
 EDITOR_ARGS = {
     "vi": VIM_ARGS,
@@ -228,13 +228,15 @@ def screen(hacking, argv):
         shutil.rmtree(workdir)
 
     message = random.choice([
-        "Great stuff you did. Saved it in ~/.%s for you.",
-        "What a bunch of hacks! Saved it in ~/.hsandbox.%s either way.",
-        "I'd even show that to my mom, if I had one. Saved on ~/.%s.",
-        "Saved that crap to ~/.%s, if you dare to use it.",
+        "Great stuff you did. Hope you enjoyed it.",
+        "Wow, what a bunch of hacks!",
+        "I'd even show that to my mom, if I had one.",
+        "I wouldn't dare to use the stuff you wrote.",
+        "I've seen better hacks.",
+        "Yeah, it was pretty cool, actually.",
         ])
 
-    print message % hacking.filename
+    print message
 
 
 def editor(hacking):
