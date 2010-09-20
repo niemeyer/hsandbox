@@ -186,6 +186,13 @@ class RubyHacking(Hacking):
     filename = "sandbox.rb"
     command = "ruby<version> sandbox.rb"
 
+class LuaHacking(Hacking):
+    filename = "sandbox.lua"
+    command = "lua<version> sandbox.lua"
+
+class PerlHacking(Hacking):
+    filename = "sandbox.pl"
+    command = "perl<version> sandbox.pl"
 
 
 LANGUAGES = {
@@ -193,6 +200,8 @@ LANGUAGES = {
     "cc": CCHacking,
     "cpp": CCHacking,
     "go": GoHacking,
+    "lua": LuaHacking,
+    "pl": PerlHacking,
     "py": PythonHacking,
     "js": NodeHacking,
     "rb": RubyHacking,
@@ -298,6 +307,8 @@ Available languages:
   hs     - Haskell (ghc)
   java   - Java
   js     - Javascript (Node)
+  lua    - Lua
+  pl     - Perl
   py     - Python
   rb     - Ruby
 
