@@ -14,7 +14,6 @@ import pyinotify
 HSANDBOX_DIR = os.path.expanduser("~/.hsandbox")
 
 SCREENRC = """
-sessionname hsandbox
 screen -t Sandbox %(hsandbox)s --editor
 split
 focus
@@ -253,7 +252,7 @@ def screen(hacking, argv):
         screenrc = os.path.join(workdir, ".hsandbox-screenrc")
         with open(screenrc, "w") as file:
             file.write(SCREENRC % {"hsandbox": " ".join(argv)})
-        subprocess.call(["screen", "-c", screenrc])
+        subprocess.call(["screen", "-S", "hsandbox", "-c", screenrc])
     finally:
         shutil.rmtree(workdir)
 
