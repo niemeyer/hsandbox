@@ -1,4 +1,35 @@
 #!/usr/bin/python
+"""
+The Hacking Sandbox - hsandbox
+
+Copyright (c) 2010, Gustavo Niemeyer <gustavo@niemeyer.net>
+
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+    * Redistributions of source code must retain the above copyright notice,
+      this list of conditions and the following disclaimer.
+    * Redistributions in binary form must reproduce the above copyright notice,
+      this list of conditions and the following disclaimer in the documentation
+      and/or other materials provided with the distribution.
+    * Neither the name of the copyright holder nor the names of its
+      contributors may be used to endorse or promote products derived from
+      this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+"""
 import subprocess
 import tempfile
 import signal
@@ -115,9 +146,7 @@ class CHacking(Hacking):
                 "int main(int argc, char *argv[])\n{\n"
                 "<cursor>\n"
                 "\treturn 0;\n"
-                "}\n\n"
-                "/* Environment variables HSANDBOX_{CFLAGS,LDFLAGS} "
-                "may be useful. */\n")
+                "}\n")
 
     def get_command(self, version):
         if version:
@@ -125,8 +154,7 @@ class CHacking(Hacking):
         else:
             standard = "-ansi"
         return ("gcc %s -Wall -pedantic sandbox.c -o sandbox"
-                " $HSANDBOX_CFLAGS $HSANDBOX_LDFLAGS && "
-                "./sandbox") % standard
+                " $HSANDBOX_CFLAGS && ./sandbox") % standard
 
 
 class CCHacking(Hacking):
@@ -138,9 +166,7 @@ class CCHacking(Hacking):
                 "int main(int argc, char *argv[])\n{\n"
                 "<cursor>\n"
                 "\treturn 0;\n"
-                "}\n\n"
-                "// Environment variables HSANDBOX_{CXXFLAGS,LDFLAGS} "
-                "may be useful.\n")
+                "}\n")
 
     def get_command(self, version):
         if version:
@@ -148,8 +174,7 @@ class CCHacking(Hacking):
         else:
             standard = "-ansi"
         return ("g++ %s -Wall -pedantic sandbox.cc -o sandbox"
-                " $HSANDBOX_CXXFLAGS $HSANDBOX_LDFLAGS && "
-                "./sandbox") % standard
+                " $HSANDBOX_CXXFLAGS && ./sandbox") % standard
 
 
 class JavaHacking(Hacking):
@@ -197,7 +222,6 @@ class PerlHacking(Hacking):
 LANGUAGES = {
     "c": CHacking,
     "cc": CCHacking,
-    "cpp": CCHacking,
     "go": GoHacking,
     "lua": LuaHacking,
     "pl": PerlHacking,
@@ -303,17 +327,17 @@ Usage: hsandbox <lang>[<version>] [options]
 
 Available languages:
 
-  c      - C
-  cc/cpp - C++
-  erl    - Erlang
-  go     - Go
-  hs     - Haskell (ghc)
-  java   - Java
-  js     - Javascript (Node)
-  lua    - Lua
-  pl     - Perl
-  py     - Python
-  rb     - Ruby
+  c    - C
+  cc   - C++
+  erl  - Erlang
+  go   - Go
+  hs   - Haskell (ghc)
+  java - Java
+  js   - Javascript (Node)
+  lua  - Lua
+  pl   - Perl
+  py   - Python
+  rb   - Ruby
 
 Versioning examples:
 
