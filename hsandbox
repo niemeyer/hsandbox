@@ -36,10 +36,16 @@ import signal
 import shutil
 import random
 import sys
+import time
 import os
 import re
 
-import pyinotify
+try:
+    import pyinotify
+except ImportError:
+    class pyinotify():
+        class ProcessEvent():
+            pass
 
 
 HSANDBOX_DIR = os.path.expanduser("~/.hsandbox")
@@ -314,13 +320,34 @@ def editor(hacking):
 
 
 def runner(hacking, version):
-    mask = pyinotify.IN_MODIFY | pyinotify.IN_DELETE
-    wm = pyinotify.WatchManager()
     handler = EventHandler(hacking, version)
-    notifier = pyinotify.Notifier(wm, handler)
-    wm.add_watch(".", mask)
-    notifier.loop()
- 
+    try:
+        mask = pyinotify.IN_MODIFY | pyinotify.IN_DELETE
+        wm = pyinotify.WatchManager()
+        notifier = pyinotify.Notifier(wm, handler)
+        wm.add_watch(".", mask)
+        notifier.loop()
+    except AttributeError:
+        class _Event():
+            pass
+        event = _Event()
+        event.pathname = os.path.join(os.getcwd(), handler.hacking.filename)
+        pathname_editor = os.path.join(os.getcwd(), '.hsandbox-editor-running')
+
+        old_stat = os.stat(handler.hacking.filename)
+        while True:
+            try:
+                current_stat = os.stat(handler.hacking.filename)
+                if current_stat.st_mtime != old_stat.st_mtime:
+                    handler.process_IN_MODIFY(event)
+                    old_stat = current_stat
+            except OSError:
+                # File do not exists, ignored.
+                pass
+            if not os.path.exists(pathname_editor):
+                sys.exit(0)
+            time.sleep(0.1)
+
 
 USAGE = """\
 Usage: hsandbox <lang>[<version>] [options]
