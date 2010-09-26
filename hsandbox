@@ -42,10 +42,11 @@ import re
 
 try:
     import pyinotify
+    from pyinotify import ProcessEvent
 except ImportError:
-    class pyinotify():
-        class ProcessEvent():
-            pass
+    pyinotify = None
+    class ProcessEvent(object):
+        pass
 
 
 HSANDBOX_DIR = os.path.expanduser("~/.hsandbox")
@@ -250,7 +251,7 @@ def parse_cursor(template):
     return content, line
 
 
-class EventHandler(pyinotify.ProcessEvent):
+class EventHandler(ProcessEvent):
 
     def __init__(self, hacking, version):
         self.hacking = hacking
@@ -320,33 +321,43 @@ def editor(hacking):
 
 
 def runner(hacking, version):
-    handler = EventHandler(hacking, version)
-    try:
-        mask = pyinotify.IN_MODIFY | pyinotify.IN_DELETE
-        wm = pyinotify.WatchManager()
-        notifier = pyinotify.Notifier(wm, handler)
-        wm.add_watch(".", mask)
-        notifier.loop()
-    except AttributeError:
-        class _Event():
-            pass
-        event = _Event()
-        event.pathname = os.path.join(os.getcwd(), handler.hacking.filename)
-        pathname_editor = os.path.join(os.getcwd(), '.hsandbox-editor-running')
+    if pyinotify:
+        pyinotify_runner(hacking, version)
+    else:
+        busy_runner(hacking, version)
 
-        old_stat = os.stat(handler.hacking.filename)
-        while True:
-            try:
-                current_stat = os.stat(handler.hacking.filename)
-                if current_stat.st_mtime != old_stat.st_mtime:
-                    handler.process_IN_MODIFY(event)
-                    old_stat = current_stat
-            except OSError:
-                # File do not exists, ignored.
-                pass
-            if not os.path.exists(pathname_editor):
-                sys.exit(0)
-            time.sleep(0.1)
+
+def pyinotify_runner(hacking, version):
+    handler = EventHandler(hacking, version)
+    mask = pyinotify.IN_MODIFY | pyinotify.IN_DELETE
+    wm = pyinotify.WatchManager()
+    notifier = pyinotify.Notifier(wm, handler)
+    wm.add_watch(".", mask)
+    notifier.loop()
+
+
+def busy_runner(hacking, version):
+    handler = EventHandler(hacking, version)
+    class Event(object):
+        pass
+    event = Event()
+    event.pathname = os.path.join(os.getcwd(), handler.hacking.filename)
+    editor_running_path = os.path.join(os.getcwd(), '.hsandbox-editor-running')
+
+    old_stat = None
+    while True:
+        try:
+            current_stat = os.stat(handler.hacking.filename)
+        except OSError:
+            # File does not exist, ignored.
+            pass
+        else:
+            if old_stat and current_stat.st_mtime != old_stat.st_mtime:
+                handler.process_IN_MODIFY(event)
+            old_stat = current_stat
+        if not os.path.exists(editor_running_path):
+            sys.exit(0)
+        time.sleep(0.1)
 
 
 USAGE = """\
