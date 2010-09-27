@@ -225,6 +225,13 @@ class PerlHacking(Hacking):
     filename = "sandbox.pl"
     command = "perl<version> sandbox.pl"
 
+class MonoHacking(Hacking):
+    filename = "sandbox.cs"
+    command = "gmcs sandbox.cs -out:sandbox.exe && ./sandbox.exe"
+    template = ("using System;\n\n"
+                "public class Sandbox\n"
+                "{\n\tpublic static void Main()\n\t{"
+		"\t\n\t\t<cursor>\n\t}\n}")
 
 LANGUAGES = {
     "c": CHacking,
@@ -238,6 +245,7 @@ LANGUAGES = {
     "erl": ErlangHacking,
     "hs": HaskellHacking,
     "java": JavaHacking,
+    "cs": MonoHacking,
     }
 
 
