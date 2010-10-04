@@ -224,6 +224,10 @@ class LuaHacking(Hacking):
 class PerlHacking(Hacking):
     filename = "sandbox.pl"
     command = "perl<version> sandbox.pl"
+    template = ("#!/usr/bin/perl\n\n"
+                "use strict;\n"
+                "use warnings;\n\n"
+                "\n<cursor>")
 
 class MonoHacking(Hacking):
     filename = "sandbox.cs"
