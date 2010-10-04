@@ -203,6 +203,12 @@ class HaskellHacking(Hacking):
     command = "runhaskell sandbox.hs"
 
 
+class PhpHacking(Hacking):
+    filename = "sandbox.php"
+    template = "<?php\n<cursor>\n?>"
+    command = "php sandbox.php"
+
+
 class PythonHacking(Hacking):
     filename = "sandbox.py"
     command = "python<version> sandbox.py"
@@ -248,6 +254,7 @@ LANGUAGES = {
     "hs": HaskellHacking,
     "java": JavaHacking,
     "cs": MonoHacking,
+    "php": PhpHacking,
     }
 
 
@@ -386,6 +393,7 @@ Available languages:
   pl   - Perl
   py   - Python
   rb   - Ruby
+  php  - PHP
 
 Versioning examples:
 
