@@ -239,6 +239,13 @@ class MonoHacking(Hacking):
                 "\t{\n\t\t<cursor>\n"
                 "\t}\n}\n")
 
+class PascalHacking(Hacking):
+    filename = "sandbox.pas"
+    command = "gpc sandbox.pas -o sandbox && ./sandbox"
+    template = ("program Sandbox;\n\n"
+		"begin\n"
+		"\t<cursor>\n"
+		"end.\n");
 
 LANGUAGES = {
     "c": CHacking,
@@ -254,6 +261,7 @@ LANGUAGES = {
     "java": JavaHacking,
     "cs": MonoHacking,
     "php": PHPHacking,
+    "pas": PascalHacking,
     }
 
 
@@ -392,6 +400,7 @@ Available languages:
   pl   - Perl
   py   - Python
   rb   - Ruby
+  pas  - Pascal
 
 Versioning examples:
 
