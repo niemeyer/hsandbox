@@ -160,8 +160,8 @@ class CHacking(Hacking):
             standard = "-std=c" + version
         else:
             standard = "-ansi"
-        return ("gcc %s -Wall -pedantic sandbox.c -o sandbox"
-                " $HSANDBOX_CFLAGS && ./sandbox") % standard
+        return ("gcc %s -Wall -pedantic %s -o sandbox"
+                " $HSANDBOX_CFLAGS && ./sandbox") % (standard, self.filename)
 
 
 class CCHacking(Hacking):
@@ -184,27 +184,15 @@ class CCHacking(Hacking):
                 " $HSANDBOX_CXXFLAGS && ./sandbox") % standard
 
 
-class ObjCHacking(Hacking):
+class ObjCHacking(CHacking):
 
     filename = "sandbox.m"
 
-    template = ("#import <Foundation/Foundation.h>\n\n"
+    template = ("#import <stdio.h>\n\n"
                 "int main(int argc, char *argv[])\n{\n"
-                "\tNSAutoreleasePool * pool ="
-                " [[NSAutoreleasePool alloc] init];\n"
                 "\t<cursor>\n"
-                "\t[pool drain];\n"
                 "\treturn 0;\n"
                 "}\n")
-
-    def get_command(self, version):
-        if version:
-            standard = "-std=c" + version
-        else:
-            standard = "-ansi"
-        return ("gcc %s -Wall -pedantic sandbox.m -o sandbox"
-                " $HSANDBOX_CFLAGS "
-                "&& ./sandbox") % standard
 
 
 class JavaHacking(Hacking):
@@ -422,11 +410,11 @@ Available languages:
   java - Java
   js   - Javascript (Node)
   lua  - Lua
+  m    - Objective C
   pas  - Pascal (gpc)
   pl   - Perl
   py   - Python
   rb   - Ruby
-  m    - Objective C
 
 Versioning examples:
 
