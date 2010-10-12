@@ -243,9 +243,10 @@ class PascalHacking(Hacking):
     filename = "sandbox.pas"
     command = "gpc sandbox.pas -o sandbox && ./sandbox"
     template = ("program Sandbox;\n\n"
-		"begin\n"
-		"\t<cursor>\n"
-		"end.\n");
+                "begin\n"
+                "\t<cursor>\n"
+                "end.\n")
+
 
 LANGUAGES = {
     "c": CHacking,
@@ -397,10 +398,10 @@ Available languages:
   java - Java
   js   - Javascript (Node)
   lua  - Lua
+  pas  - Pascal (gpc)
   pl   - Perl
   py   - Python
   rb   - Ruby
-  pas  - Pascal
 
 Versioning examples:
 
