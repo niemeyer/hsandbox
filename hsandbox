@@ -258,6 +258,9 @@ class PascalHacking(Hacking):
                 "\t<cursor>\n"
                 "end.\n")
 
+class ShellHacking(Hacking):
+    filename = "sandbox.sh"
+    command = "sh sandbox.sh"
 
 LANGUAGES = {
     "c": CHacking,
@@ -275,6 +278,7 @@ LANGUAGES = {
     "php": PHPHacking,
     "pas": PascalHacking,
     "m": ObjCHacking,
+    "sh": ShellHacking,
     }
 
 
@@ -415,6 +419,7 @@ Available languages:
   pl   - Perl
   py   - Python
   rb   - Ruby
+  sh   - Shell (sh)
 
 Versioning examples:
 
