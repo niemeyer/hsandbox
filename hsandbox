@@ -74,10 +74,18 @@ class Error(Exception):
 
 class Hacking(object):
 
+    label = None
     filename = "sandbox.txt"
     template = "<cursor>"
     command = ""
     use_old_sandbox = False
+
+    @classmethod
+    def get_label(cls):
+        if cls.label is not None:
+            return cls.label
+        else:
+            return re.sub("Hacking$", "", cls.__name__)
 
     def write_sandbox(self):
         template_paths = [os.path.join(HSANDBOX_DIR,
@@ -166,6 +174,8 @@ class CHacking(Hacking):
 
 class CCHacking(Hacking):
 
+    label = "C++"
+
     filename = "sandbox.cc"
 
     template = ("#include <iostream>\n\n"
@@ -185,6 +195,8 @@ class CCHacking(Hacking):
 
 
 class ObjCHacking(CHacking):
+
+    label = "Objective C"
 
     filename = "sandbox.m"
 
@@ -209,6 +221,7 @@ class JavaHacking(Hacking):
 
 
 class HaskellHacking(Hacking):
+    label = "Haskell (ghc)"
     filename = "sandbox.hs"
     template = "\nmain =\n\t<cursor>\n"
     command = "runhaskell sandbox.hs"
@@ -223,6 +236,7 @@ class PythonHacking(Hacking):
     command = "python<version> sandbox.py"
 
 class NodeHacking(Hacking):
+    label = "Javascript (Node)"
     filename = "sandbox.js"
     command = "node<version> sandbox.js"
 
@@ -242,6 +256,7 @@ class PerlHacking(Hacking):
                 "<cursor>")
 
 class MonoHacking(Hacking):
+    label = "C# (mono)"
     filename = "sandbox.cs"
     command = "gmcs sandbox.cs -out:sandbox.exe && ./sandbox.exe"
     template = ("using System;\n\n"
@@ -251,6 +266,7 @@ class MonoHacking(Hacking):
                 "\t}\n}\n")
 
 class PascalHacking(Hacking):
+    label = "Pascal (gpc)"
     filename = "sandbox.pas"
     command = "gpc sandbox.pas -o sandbox && ./sandbox"
     template = ("program Sandbox;\n\n"
@@ -259,6 +275,7 @@ class PascalHacking(Hacking):
                 "end.\n")
 
 class ShellHacking(Hacking):
+    label = "Shell (sh)"
     filename = "sandbox.sh"
     command = "sh sandbox.sh"
 
@@ -401,25 +418,26 @@ def busy_runner(hacking, version):
         time.sleep(0.1)
 
 
+def describe_languages():
+    languages = LANGUAGES.items()
+    descriptions = [(tag, hacking.get_label()) for (tag, hacking) in languages]
+    descriptions.sort(key=lambda (tag, label): tag)
+
+    max_tag_length = max(len(tag) for (tag, label) in descriptions)
+
+    def format_line(tag, label):
+        return "  %-*s - %s" % (max_tag_length, tag, label)
+        
+    lines = [format_line(tag, label) for (tag, label) in descriptions]
+    return "\n".join(lines)
+
+
 USAGE = """\
 Usage: hsandbox <lang>[<version>] [options]
 
 Available languages:
 
-  c    - C
-  cc   - C++
-  erl  - Erlang
-  go   - Go
-  hs   - Haskell (ghc)
-  java - Java
-  js   - Javascript (Node)
-  lua  - Lua
-  m    - Objective C
-  pas  - Pascal (gpc)
-  pl   - Perl
-  py   - Python
-  rb   - Ruby
-  sh   - Shell (sh)
+%(languages)s
 
 Versioning examples:
 
@@ -432,7 +450,7 @@ Options:
   -c  - Continue editing the last sandbox for the given language.
   -v  - Split the screen vertically rather than horizontally.
 
-"""
+""" % {"languages": describe_languages()}
 
 
 def split_version(argument):
