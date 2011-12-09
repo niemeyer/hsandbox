@@ -419,14 +419,16 @@ def busy_runner(hacking, version):
 
 
 def describe_languages():
-    language_tags = LANGUAGES.keys()
-    language_tags.sort()
-    max_tag_length = max(len(tag) for tag in language_tags)
+    languages = LANGUAGES.items()
+    descriptions = [(tag, hacking.get_label()) for (tag, hacking) in languages]
+    descriptions.sort(key=lambda (tag, label): tag)
 
-    def format_line(tag, hacking):
-        return "  %-*s - %s" % (max_tag_length, tag, hacking.get_label())
+    max_tag_length = max(len(tag) for (tag, label) in descriptions)
+
+    def format_line(tag, label):
+        return "  %-*s - %s" % (max_tag_length, tag, label)
         
-    lines = [format_line(tag, LANGUAGES[tag]) for tag in language_tags]
+    lines = [format_line(tag, label) for (tag, label) in descriptions]
     return "\n".join(lines)
 
 
