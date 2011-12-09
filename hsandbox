@@ -264,7 +264,7 @@ class ShellHacking(Hacking):
 
 class ClojureHacking(Hacking):
     filename = "sandbox.clj"
-    command = "clojure -i sandbox.clj"
+    command = "clojure<version> -i sandbox.clj"
 
 LANGUAGES = {
     "c": CHacking,
