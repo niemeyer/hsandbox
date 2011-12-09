@@ -262,6 +262,10 @@ class ShellHacking(Hacking):
     filename = "sandbox.sh"
     command = "sh sandbox.sh"
 
+class ClojureHacking(Hacking):
+    filename = "sandbox.clj"
+    command = "clojure<version> -i sandbox.clj"
+
 LANGUAGES = {
     "c": CHacking,
     "cc": CCHacking,
@@ -279,6 +283,7 @@ LANGUAGES = {
     "pas": PascalHacking,
     "m": ObjCHacking,
     "sh": ShellHacking,
+    "clj": ClojureHacking,
     }
 
 
@@ -420,6 +425,7 @@ Available languages:
   py   - Python
   rb   - Ruby
   sh   - Shell (sh)
+  clj  - Clojure
 
 Versioning examples:
 
