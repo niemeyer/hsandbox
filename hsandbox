@@ -84,8 +84,7 @@ class Hacking(object):
     def get_label(cls):
         if cls.label is not None:
             return cls.label
-        else:
-            return re.sub("Hacking$", "", cls.__name__)
+        return cls.__name__.replace("Hacking", "")
 
     def write_sandbox(self):
         template_paths = [os.path.join(HSANDBOX_DIR,
