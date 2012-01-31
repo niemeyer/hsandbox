@@ -122,6 +122,15 @@ class GoHacking(Hacking):
                 "import (\n)\n\n"
                 "func main() {\n<cursor>\n}\n")
 
+    def __init__(self):
+        self._prefix = ""
+        path = os.environ.get("PATH")
+        for dir in path.split(os.pathsep):
+            cmd = os.path.join(dir, "go")
+            if os.path.exists(cmd):
+                self._prefix = "go tool "
+                break
+
     def get_command(self, version):
         arch = os.uname()[-1]
         if arch == "x86_64":
@@ -132,9 +141,9 @@ class GoHacking(Hacking):
             number = 5
         else:
             return 'echo "Error: hsandbox can\'t Go on architecture %s"' % arch
-        return ("%dg -o sandbox.l sandbox.go && "
-                "%dl -o sandbox sandbox.l && "
-                "./sandbox") % (number, number)
+        return ("%s%dg -o sandbox.l sandbox.go && "
+                "%s%dl -o sandbox sandbox.l && "
+                "./sandbox") % (self._prefix, number, self._prefix, number)
 
 
 class ErlangHacking(Hacking):
