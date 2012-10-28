@@ -494,7 +494,7 @@ def main(argv):
     vertical = False
 
     try:
-        opts, args = getopt.getopt(argv[2:], "cvf:", ["editor", "runner"])
+        opts, args = getopt.getopt(argv[2:], "cv", ["editor", "runner"])
     except getopt.GetoptError as err:
         sys.exit(USAGE)
 
