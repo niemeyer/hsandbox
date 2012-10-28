@@ -39,6 +39,7 @@ import sys
 import time
 import os
 import re
+import getopt
 
 try:
     import pyinotify
@@ -492,18 +493,22 @@ def main(argv):
     mode = "screen"
     vertical = False
 
-    if len(argv) > 2:
-        for option in argv[2:]:
-            if option == "--editor":
-                mode = "editor"
-            elif option == "--runner":
-                mode = "runner"
-            elif option == "-c":
-                hacking.use_old_sandbox = True
-            elif option == "-v":
-                vertical = True
-            else:
-                sys.exit(USAGE)
+    try:
+        opts, args = getopt.getopt(argv[2:], "cvf:", ["editor", "runner"])
+    except getopt.GetoptError as err:
+        sys.exit(USAGE)
+
+    for opt, a in opts:
+        if opt in "--editor":
+            mode = "editor"
+        elif opt in "--runner":
+            mode = "runner"
+        elif opt == "-c":
+            hacking.use_old_sandbox = True
+        elif opt == "-v":
+            vertical = True
+        else:
+            sys.exit(USAGE)
 
     if mode == "screen":
         screen(hacking, argv, vertical)
