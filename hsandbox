@@ -59,6 +59,29 @@ screen -t Output %(hsandbox)s --runner
 focus
 """
 
+ITERM_SCRIPT = """
+tell application "iTerm"
+  activate
+  set hackterm to (make new terminal)
+  tell hackterm
+    launch session "Default"
+    set number of rows to 48
+    tell last session
+      set name to "Sandbox"
+      write text "cd '%(workdir)s' && %(hsandbox)s --editor"
+    end tell
+    tell i term application "System Events" to keystroke "%(split_opts)s" using command down
+    tell last session
+      set name to "Output"
+      write text "cd '%(workdir)s' && clear && %(hsandbox)s --runner"
+    end tell
+    repeat while exists last session
+      delay 0.5
+    end repeat
+  end tell
+end tell
+"""
+
 VIM_ARGS = "+$HSANDBOX_LINE +'normal $'"
 
 EDITOR_ARGS = {
@@ -128,22 +151,11 @@ class GoHacking(Hacking):
         for dir in path.split(os.pathsep):
             cmd = os.path.join(dir, "go")
             if os.path.exists(cmd):
-                self._prefix = "go tool "
+                self._prefix = "go run "
                 break
 
     def get_command(self, version):
-        arch = os.uname()[-1]
-        if arch == "x86_64":
-            number = 6
-        elif arch.endswith("86"):
-            number = 8
-        elif arch.startswith("arm"):
-            number = 5
-        else:
-            return 'echo "Error: hsandbox can\'t Go on architecture %s"' % arch
-        return ("%s%dg -o sandbox.l sandbox.go && "
-                "%s%dl -o sandbox sandbox.l && "
-                "./sandbox") % (self._prefix, number, self._prefix, number)
+        return "%s sandbox.go" % self._prefix
 
 
 class ErlangHacking(Hacking):
@@ -332,7 +344,10 @@ class EventHandler(ProcessEvent):
     def process_IN_MODIFY(self, event):
         if event.pathname == os.path.join(os.getcwd(), self.hacking.filename):
             if self.process:
-                os.killpg(self.process.pid, signal.SIGKILL)
+                try:
+                    os.killpg(self.process.pid, signal.SIGKILL)
+                except EnvironmentError:
+                    pass
             def preexec_fn():
                 os.setpgid(0, 0)
             os.system("clear")
@@ -346,21 +361,42 @@ class EventHandler(ProcessEvent):
             sys.exit(0)
 
 
-def screen(hacking, argv, vertical):
+def term(hacking, argv, vertical):
     argv[0] = os.path.abspath(argv[0])
     workdir = tempfile.mkdtemp(prefix="hsandbox-")
+    term = os.environ.get("HSANDBOX_TERM")
     try:
         os.chdir(workdir)
-        screenrc = os.path.join(workdir, ".hsandbox-screenrc")
-        with open(screenrc, "w") as file:
-            file.write(SCREENRC % {"hsandbox": " ".join(argv),
-                                   "split_opts": vertical and "-v" or ""})
-        try:
-            subprocess.call(["screen", "-S", "hsandbox", "-c", screenrc])
-        except OSError:
-            raise Error("Couldn't run 'screen'.  Is it installed?")
+        if term == "iterm":
+            iterm(workdir, argv, vertical)
+        else:
+            screen(workdir, argv, vertical)
     finally:
         shutil.rmtree(workdir)
+
+
+
+def iterm(workdir, argv, vertical):
+    iterm_applescrpt = os.path.join(workdir, "iterm.scrp")
+    with open(iterm_applescrpt, "w") as file:
+            file.write(ITERM_SCRIPT % {"hsandbox": " ".join(argv),
+                                       "split_opts": vertical and "d" or "D",
+                                       "workdir": workdir})
+    try:
+        subprocess.call(["osascript", iterm_applescrpt])
+    except OSError:
+        raise Error("Couldn't run 'iterm'.  Is it installed?")
+
+
+def screen(workdir, argv, vertical):
+    screenrc = os.path.join(workdir, ".hsandbox-screenrc")
+    with open(screenrc, "w") as file:
+        file.write(SCREENRC % {"hsandbox": " ".join(argv),
+                               "split_opts": vertical and "-v" or ""})
+    try:
+        subprocess.call(["screen", "-S", "hsandbox", "-c", screenrc])
+    except OSError:
+        raise Error("Couldn't run 'screen'.  Is it installed?")
 
     message = random.choice([
         "Great stuff you did. Hope you enjoyed it.",
@@ -489,7 +525,7 @@ def main(argv):
     else:
         sys.exit(USAGE)
 
-    mode = "screen"
+    mode = "term"
     vertical = False
 
     if len(argv) > 2:
@@ -505,8 +541,8 @@ def main(argv):
             else:
                 sys.exit(USAGE)
 
-    if mode == "screen":
-        screen(hacking, argv, vertical)
+    if mode == "term":
+        term(hacking, argv, vertical)
     elif mode == "editor":
         editor(hacking)
     elif mode == "runner":
