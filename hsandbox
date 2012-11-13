@@ -332,7 +332,10 @@ class EventHandler(ProcessEvent):
     def process_IN_MODIFY(self, event):
         if event.pathname == os.path.join(os.getcwd(), self.hacking.filename):
             if self.process:
-                os.killpg(self.process.pid, signal.SIGKILL)
+                try:
+                    os.killpg(self.process.pid, signal.SIGKILL)
+                except Exception, e:
+                    pass
             def preexec_fn():
                 os.setpgid(0, 0)
             os.system("clear")
