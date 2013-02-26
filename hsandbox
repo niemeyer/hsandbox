@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 """
 The Hacking Sandbox - hsandbox
 
@@ -256,6 +256,14 @@ class LuaHacking(Hacking):
     filename = "sandbox.lua"
     command = "lua<version> sandbox.lua"
 
+class JuliaHacking(Hacking):
+    filename = "sandbox.jl"
+    command = "julia sandbox.jl"
+
+class OctaveHacking(Hacking):
+    filename = "sandbox.m"
+    command = "octave -q sandbox.m"
+
 class PerlHacking(Hacking):
     filename = "sandbox.pl"
     command = "perl<version> sandbox.pl"
@@ -309,6 +317,8 @@ LANGUAGES = {
     "m": ObjCHacking,
     "sh": ShellHacking,
     "clj": ClojureHacking,
+		"jl": JuliaHacking,
+		"m": OctaveHacking,
     }
 
 
