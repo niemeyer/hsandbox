@@ -291,6 +291,16 @@ class ClojureHacking(Hacking):
     filename = "sandbox.clj"
     command = "clojure<version> -i sandbox.clj"
 
+class LispHacking(Hacking):
+    label = "Common Lisp (sbcl)"
+    filename = "sandbox.lisp"
+    template = ("(in-package :cl-user)\n"
+                "(defpackage :lisp-hacking"
+                "\n    (:use :cl))\n"
+                "(in-package :lisp-hacking)\n\n"
+                "<cursor>\n")
+    command = "sbcl --script sandbox.lisp"
+
 LANGUAGES = {
     "c": CHacking,
     "cc": CCHacking,
@@ -309,6 +319,7 @@ LANGUAGES = {
     "m": ObjCHacking,
     "sh": ShellHacking,
     "clj": ClojureHacking,
+    "lisp": LispHacking,
     }
 
 
@@ -440,7 +451,7 @@ def describe_languages():
 
     def format_line(tag, label):
         return "  %-*s - %s" % (max_tag_length, tag, label)
-        
+
     lines = [format_line(tag, label) for (tag, label) in descriptions]
     return "\n".join(lines)
 
