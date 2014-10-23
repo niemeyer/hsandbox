@@ -345,7 +345,8 @@ def screen(hacking, argv, vertical):
         os.chdir(workdir)
         try:
             hsandbox = " ".join(argv)
-            del os.environ["TMUX"]
+            if "TMUX" in os.environ:
+                del os.environ["TMUX"]
             splitopt = "-v"
             if vertical:
                 splitopt = "-h" # Split horizontally, vertical pane.
