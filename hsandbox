@@ -122,28 +122,8 @@ class GoHacking(Hacking):
                 "import (\n)\n\n"
                 "func main() {\n<cursor>\n}\n")
 
-    def __init__(self):
-        self._prefix = ""
-        path = os.environ.get("PATH")
-        for dir in path.split(os.pathsep):
-            cmd = os.path.join(dir, "go")
-            if os.path.exists(cmd):
-                self._prefix = "go tool "
-                break
-
     def get_command(self, version):
-        arch = os.uname()[-1]
-        if arch == "x86_64":
-            number = 6
-        elif arch.endswith("86"):
-            number = 8
-        elif arch.startswith("arm"):
-            number = 5
-        else:
-            return 'echo "Error: hsandbox can\'t Go on architecture %s"' % arch
-        return ("%s%dg -o sandbox.l sandbox.go && "
-                "%s%dl -o sandbox sandbox.l && "
-                "./sandbox") % (self._prefix, number, self._prefix, number)
+        return "go run " + self.filename
 
 
 class ErlangHacking(Hacking):
@@ -291,11 +271,23 @@ class ClojureHacking(Hacking):
     filename = "sandbox.clj"
     command = "clojure<version> -i sandbox.clj"
 
+class LilyPondHacking(Hacking):
+    label = "LilyPond"
+    filename = "sandbox.ly"
+    command = "lilypond sandbox.ly && evince sandbox.pdf"
+    template = ('\\version "2.14.0"\n\n'
+                "\\relative c' {\n"
+                "  <cursor>\n"
+                "}\n")
+
+
+
 LANGUAGES = {
     "c": CHacking,
     "cc": CCHacking,
     "go": GoHacking,
     "lua": LuaHacking,
+    "ly": LilyPondHacking,
     "pl": PerlHacking,
     "py": PythonHacking,
     "js": NodeHacking,
@@ -351,12 +343,19 @@ def screen(hacking, argv, vertical):
     workdir = tempfile.mkdtemp(prefix="hsandbox-")
     try:
         os.chdir(workdir)
-        screenrc = os.path.join(workdir, ".hsandbox-screenrc")
-        with open(screenrc, "w") as file:
-            file.write(SCREENRC % {"hsandbox": " ".join(argv),
-                                   "split_opts": vertical and "-v" or ""})
         try:
-            subprocess.call(["screen", "-S", "hsandbox", "-c", screenrc])
+            hsandbox = " ".join(argv)
+            del os.environ["TMUX"]
+            splitopt = "-v"
+            if vertical:
+                splitopt = "-h" # Split horizontally, vertical pane.
+            subprocess.call([
+                "tmux",
+                "new-session", "-n", "Sandbox", hsandbox + " --editor", ";",
+                "set-option", "-q", "status", "off", ";",
+                "split-window", splitopt, hsandbox + " --runner", ";",
+                "last-pane", ";",
+            ])
         except OSError:
             raise Error("Couldn't run 'screen'.  Is it installed?")
     finally:
@@ -461,7 +460,7 @@ Versioning examples:
 Options:
 
   -c  - Continue editing the last sandbox for the given language.
-  -v  - Split the screen vertically rather than horizontally.
+  -v  - Use vertical panes rather than horizontal.
 
 """ % {"languages": describe_languages()}
 
