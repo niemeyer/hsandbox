@@ -51,14 +51,6 @@ except ImportError:
 
 HSANDBOX_DIR = os.path.expanduser("~/.hsandbox")
 
-SCREENRC = """
-screen -t Sandbox %(hsandbox)s --editor
-split %(split_opts)s
-focus
-screen -t Output %(hsandbox)s --runner
-focus
-"""
-
 VIM_ARGS = "+$HSANDBOX_LINE +'normal $'"
 
 EDITOR_ARGS = {
@@ -358,7 +350,7 @@ def screen(hacking, argv, vertical):
                 "last-pane", ";",
             ])
         except OSError:
-            raise Error("Couldn't run 'screen'.  Is it installed?")
+            raise Error("Couldn't run 'tmux'.  Is it installed?")
     finally:
         shutil.rmtree(workdir)
 
