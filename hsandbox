@@ -351,13 +351,17 @@ def screen(hacking, argv, vertical):
             splitopt = "-v"
             if vertical:
                 splitopt = "-h" # Split horizontally, vertical pane.
-            subprocess.call([
+            tmux_args = [
                 "tmux",
                 "new-session", "-n", "Sandbox", hsandbox + " --editor", ";",
                 "set-option", "-q", "status", "off", ";",
                 "split-window", splitopt, hsandbox + " --runner", ";",
-                "last-pane", ";",
-            ])
+                "last-pane", ";"
+            ]
+            if "HSANDBOX_PREFIX" in os.environ:
+                tmux_prefix = os.environ.get("HSANDBOX_PREFIX")
+                tmux_args.extend(["set", "prefix", "C-" + tmux_prefix, ";"])
+            subprocess.call(tmux_args)
         except OSError:
             raise Error("Couldn't run 'tmux'.  Is it installed?")
     finally:
@@ -441,7 +445,7 @@ def describe_languages():
 
     def format_line(tag, label):
         return "  %-*s - %s" % (max_tag_length, tag, label)
-        
+
     lines = [format_line(tag, label) for (tag, label) in descriptions]
     return "\n".join(lines)
 
