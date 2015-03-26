@@ -52,11 +52,20 @@ except ImportError:
 HSANDBOX_DIR = os.path.expanduser("~/.hsandbox")
 
 VIM_ARGS = "+$HSANDBOX_LINE +'normal $'"
+EMACS_ARGS = """-nw --eval '
+    (add-hook '"'"'after-change-major-mode-hook
+      (lambda()
+        (let ((target-line (string-to-number (getenv "HSANDBOX_LINE"))))
+          (message (number-to-string target-line))
+          (goto-line target-line)
+          (end-of-line))))
+'"""
 
 EDITOR_ARGS = {
     "vi": VIM_ARGS,
     "vim": VIM_ARGS,
     "gvim": VIM_ARGS,
+    "emacs": EMACS_ARGS
     }
 
 
