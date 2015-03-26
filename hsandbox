@@ -353,11 +353,20 @@ def screen(hacking, argv, vertical):
                 splitopt = "-h" # Split horizontally, vertical pane.
             tmux_args = [
                 "tmux",
-                "new-session", "-n", "Sandbox", hsandbox + " --editor", ";",
+            ]
+            editor = os.environ.get("HSANDBOX_EDITOR")
+            if not editor:
+                tmux_args.extend(["new-session", "-n", "Sandbox", hsandbox + " --editor", ";",])
+            else:
+                tmux_args.extend([
+                    "new-session", "-n", "Sandbox",
+                    "HSANDBOX_EDITOR=" + editor + " " + hsandbox + " --editor", ";",
+                ])
+            tmux_args.extend([
                 "set-option", "-q", "status", "off", ";",
                 "split-window", splitopt, hsandbox + " --runner", ";",
                 "last-pane", ";"
-            ]
+            ])
             if "HSANDBOX_PREFIX" in os.environ:
                 tmux_prefix = os.environ.get("HSANDBOX_PREFIX")
                 tmux_args.extend(["set", "prefix", "C-" + tmux_prefix, ";"])
@@ -387,6 +396,8 @@ def editor(hacking):
         cmd = os.environ.get("EDITOR")
         if not cmd:
             cmd = "vi"
+    cmd_list = cmd.split()
+    if len(cmd_list) is 1:
         cmd_args = EDITOR_ARGS.get(cmd.split()[0])
         if cmd_args:
             cmd += " " + cmd_args
