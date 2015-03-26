@@ -120,7 +120,7 @@ class GoHacking(Hacking):
     filename = "sandbox.go"
 
     template = ("package main\n\n"
-                "import (\n)\n\n"
+                "import (\n\"fmt\"\n)\n\n"
                 "func main() {\n<cursor>\n}\n")
 
     def get_command(self, version):
