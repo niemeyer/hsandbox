@@ -117,6 +117,15 @@ class GoHacking(Hacking):
     def get_command(self, version):
         return "go run " + self.filename
 
+class RustHacking(Hacking):
+
+    filename = "sandbox.rs"
+
+    template = ("fn main() {\n<cursor>\n}\n")
+
+    def get_command(self, version):
+        return "rustc " + self.filename+ " && ./sandbox"
+
 
 class ErlangHacking(Hacking):
 
@@ -284,6 +293,7 @@ LANGUAGES = {
     "py": PythonHacking,
     "js": NodeHacking,
     "rb": RubyHacking,
+    "rs": RustHacking,
     "erl": ErlangHacking,
     "hs": HaskellHacking,
     "java": JavaHacking,
