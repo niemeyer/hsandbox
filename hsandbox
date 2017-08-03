@@ -326,7 +326,10 @@ class EventHandler(ProcessEvent):
     def process_IN_MODIFY(self, event):
         if event.pathname == os.path.join(os.getcwd(), self.hacking.filename):
             if self.process:
-                os.killpg(self.process.pid, signal.SIGKILL)
+                try:
+                    os.killpg(self.process.pid, signal.SIGKILL)
+                except Exception, e:
+                    pass
             def preexec_fn():
                 os.setpgid(0, 0)
             os.system("clear")
@@ -428,9 +431,9 @@ def busy_runner(hacking, version):
             if old_stat and current_stat.st_mtime != old_stat.st_mtime:
                 handler.process_IN_MODIFY(event)
             old_stat = current_stat
+        time.sleep(0.1)
         if not os.path.exists(editor_running_path):
             sys.exit(0)
-        time.sleep(0.1)
 
 
 def describe_languages():
