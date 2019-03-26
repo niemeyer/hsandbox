@@ -115,7 +115,8 @@ class GoHacking(Hacking):
                 "func main() {\n<cursor>\n}\n")
 
     def get_command(self, version):
-        return "go run " + self.filename
+        return ("go fmt " + self.filename + " && "
+                "go run " + self.filename)
 
 class RustHacking(Hacking):
 
