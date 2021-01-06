@@ -418,6 +418,7 @@ def busy_runner(hacking, version):
     editor_running_path = os.path.join(os.getcwd(), '.hsandbox-editor-running')
 
     old_stat = None
+    started = time.time()
     while True:
         try:
             current_stat = os.stat(handler.hacking.filename)
@@ -428,7 +429,7 @@ def busy_runner(hacking, version):
             if old_stat and current_stat.st_mtime != old_stat.st_mtime:
                 handler.process_IN_MODIFY(event)
             old_stat = current_stat
-        if not os.path.exists(editor_running_path):
+        if not os.path.exists(editor_running_path) and (old_stat is not None or time.time() - started > 2):
             sys.exit(0)
         time.sleep(0.1)
 
