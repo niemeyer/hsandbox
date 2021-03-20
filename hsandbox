@@ -373,7 +373,7 @@ def screen(hacking, argv, vertical):
         "Yeah, it was pretty cool, actually.",
         ])
 
-    print message
+    print(message)
 
 
 def editor(hacking):
@@ -437,7 +437,10 @@ def busy_runner(hacking, version):
 def describe_languages():
     languages = LANGUAGES.items()
     descriptions = [(tag, hacking.get_label()) for (tag, hacking) in languages]
-    descriptions.sort(key=lambda (tag, label): tag)
+    def key(desc):
+        tag, label = desc
+        return tag
+    descriptions.sort(key=key)
 
     max_tag_length = max(len(tag) for (tag, label) in descriptions)
 
@@ -523,5 +526,5 @@ if __name__ == "__main__":
         main(sys.argv)
     except KeyboardInterrupt:
         sys.exit("Interrupted")
-    except Error, e:
+    except Error as e:
         sys.exit("error: %s" % e)
