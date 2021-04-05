@@ -326,7 +326,10 @@ class EventHandler(ProcessEvent):
     def process_IN_MODIFY(self, event):
         if event.pathname == os.path.join(os.getcwd(), self.hacking.filename):
             if self.process:
-                os.killpg(self.process.pid, signal.SIGKILL)
+                subprocess.call([
+                    "tmux",
+                    "respwan-pane", "-t", "Sandbox:0", ";",
+                    ])
             def preexec_fn():
                 os.setpgid(0, 0)
             os.system("clear")
@@ -356,8 +359,10 @@ def screen(hacking, argv, vertical):
                 "tmux",
                 "new-session", "-n", "Sandbox", hsandbox + " --editor", ";",
                 "set-option", "-q", "status", "off", ";",
+                "set-option", "remain-on-exit", ";",
                 "split-window", splitopt, hsandbox + " --runner", ";",
                 "last-pane", ";",
+                "set-option", "remain-on-exit", "off", ";",
             ])
         except OSError:
             raise Error("Couldn't run 'tmux'.  Is it installed?")
