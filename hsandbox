@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python2
 """
 The Hacking Sandbox - hsandbox
 
@@ -52,11 +52,20 @@ except ImportError:
 HSANDBOX_DIR = os.path.expanduser("~/.hsandbox")
 
 VIM_ARGS = "+$HSANDBOX_LINE +'normal $'"
+EMACS_ARGS = """-nw --eval '
+    (add-hook '"'"'after-change-major-mode-hook
+      (lambda()
+        (let ((target-line (string-to-number (getenv "HSANDBOX_LINE"))))
+          (message (number-to-string target-line))
+          (goto-line target-line)
+          (end-of-line))))
+'"""
 
 EDITOR_ARGS = {
     "vi": VIM_ARGS,
     "vim": VIM_ARGS,
     "gvim": VIM_ARGS,
+    "emacs": EMACS_ARGS
     }
 
 
@@ -111,7 +120,7 @@ class GoHacking(Hacking):
     filename = "sandbox.go"
 
     template = ("package main\n\n"
-                "import (\n)\n\n"
+                "import (\n\"fmt\"\n)\n\n"
                 "func main() {\n<cursor>\n}\n")
 
     def get_command(self, version):
@@ -352,13 +361,26 @@ def screen(hacking, argv, vertical):
             splitopt = "-v"
             if vertical:
                 splitopt = "-h" # Split horizontally, vertical pane.
-            subprocess.call([
+            tmux_args = [
                 "tmux",
-                "new-session", "-n", "Sandbox", hsandbox + " --editor", ";",
+            ]
+            editor = os.environ.get("HSANDBOX_EDITOR")
+            if not editor:
+                tmux_args.extend(["new-session", "-n", "Sandbox", hsandbox + " --editor", ";",])
+            else:
+                tmux_args.extend([
+                    "new-session", "-n", "Sandbox",
+                    "HSANDBOX_EDITOR=" + editor + " " + hsandbox + " --editor", ";",
+                ])
+            tmux_args.extend([
                 "set-option", "-q", "status", "off", ";",
                 "split-window", splitopt, hsandbox + " --runner", ";",
-                "last-pane", ";",
+                "last-pane", ";"
             ])
+            if "HSANDBOX_PREFIX" in os.environ:
+                tmux_prefix = os.environ.get("HSANDBOX_PREFIX")
+                tmux_args.extend(["set", "prefix", "C-" + tmux_prefix, ";"])
+            subprocess.call(tmux_args)
         except OSError:
             raise Error("Couldn't run 'tmux'.  Is it installed?")
     finally:
@@ -384,6 +406,8 @@ def editor(hacking):
         cmd = os.environ.get("EDITOR")
         if not cmd:
             cmd = "vi"
+    cmd_list = cmd.split()
+    if len(cmd_list) is 1:
         cmd_args = EDITOR_ARGS.get(cmd.split()[0])
         if cmd_args:
             cmd += " " + cmd_args
@@ -443,7 +467,7 @@ def describe_languages():
 
     def format_line(tag, label):
         return "  %-*s - %s" % (max_tag_length, tag, label)
-        
+
     lines = [format_line(tag, label) for (tag, label) in descriptions]
     return "\n".join(lines)
 
