@@ -117,12 +117,6 @@ class GoHacking(Hacking):
     def get_command(self, version):
         return "go run " + self.filename
 
-class StarlarkHacking(Hacking):
-    filename = "sandbox.star"
-
-    def get_command(self, version):
-        return "starlark " + self.filename
-
 class RustHacking(Hacking):
 
     filename = "sandbox.rs"
@@ -277,6 +271,12 @@ class ShellHacking(Hacking):
 class ClojureHacking(Hacking):
     filename = "sandbox.clj"
     command = "clojure<version> -i sandbox.clj"
+
+class StarlarkHacking(Hacking):
+    filename = "sandbox.star"
+
+    def get_command(self, version):
+        return "starlark " + self.filename
 
 class LilyPondHacking(Hacking):
     label = "LilyPond"
