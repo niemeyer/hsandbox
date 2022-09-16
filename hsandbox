@@ -117,6 +117,12 @@ class GoHacking(Hacking):
     def get_command(self, version):
         return "go run " + self.filename
 
+class StarlarkHacking(Hacking):
+    filename = "sandbox.star"
+
+    def get_command(self, version):
+        return "starlark " + self.filename
+
 class RustHacking(Hacking):
 
     filename = "sandbox.rs"
@@ -303,6 +309,7 @@ LANGUAGES = {
     "m": ObjCHacking,
     "sh": ShellHacking,
     "clj": ClojureHacking,
+    "star": StarlarkHacking,
     }
 
 
