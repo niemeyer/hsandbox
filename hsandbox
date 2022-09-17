@@ -272,6 +272,10 @@ class ClojureHacking(Hacking):
     filename = "sandbox.clj"
     command = "clojure<version> -i sandbox.clj"
 
+class StarlarkHacking(Hacking):
+    filename = "sandbox.star"
+    command = "starlark sandbox.star"
+
 class LilyPondHacking(Hacking):
     label = "LilyPond"
     filename = "sandbox.ly"
@@ -303,6 +307,7 @@ LANGUAGES = {
     "m": ObjCHacking,
     "sh": ShellHacking,
     "clj": ClojureHacking,
+    "star": StarlarkHacking,
     }
 
 
