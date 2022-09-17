@@ -274,9 +274,7 @@ class ClojureHacking(Hacking):
 
 class StarlarkHacking(Hacking):
     filename = "sandbox.star"
-
-    def get_command(self, version):
-        return "starlark " + self.filename
+    command = "starlark sandbox.star"
 
 class LilyPondHacking(Hacking):
     label = "LilyPond"
